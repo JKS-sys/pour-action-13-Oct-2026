@@ -15,7 +15,10 @@
     packages: jq ffmpeg wget
 ```
 
-That is the whole step: it downloads the `pour` build for the runner (macOS arm64/x86_64, Linux x86_64/arm64, Windows), creates `/opt/pour`, fetches the registry and pours the packages — every bottle in parallel, from Homebrew's own build farm.
+That is the whole step: it downloads the `pour` build for the runner (macOS arm64/x86_64, Linux x86_64/arm64, Windows), creates `/opt/pour`, fetches the registry and pours the packages — every bottle in parallel.
+
+
+> ⭐ **If Pour saves you time, star this repository** — stars are how other people find it.
 
 ## See it move
 
