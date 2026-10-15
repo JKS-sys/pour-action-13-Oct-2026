@@ -16,7 +16,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PACKAGES="${*:-${PACKAGES:-}}"
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-export GITHUB_PATH="$tmp/path" GITHUB_ENV="$tmp/env" GITHUB_OUTPUT="$tmp/output" RUNNER_TEMP="$tmp"
+export GITHUB_PATH="$tmp/path" GITHUB_ENV="$tmp/env" GITHUB_OUTPUT="$tmp/output" RUNNER_TEMP="$tmp" GITHUB_STEP_SUMMARY="$tmp/summary.md" GITHUB_ACTION_PATH="$PWD"
 : > "$GITHUB_PATH"; : > "$GITHUB_ENV"; : > "$GITHUB_OUTPUT"
 # a runner always has sudo; a root shell in a container may not
 if ! command -v sudo >/dev/null && [ "$(id -u)" = 0 ]; then mkdir -p "$tmp/bin"; printf '#!/bin/sh\nexec "$@"\n' > "$tmp/bin/sudo"; chmod +x "$tmp/bin/sudo"; export PATH="$tmp/bin:$PATH"; fi
@@ -38,8 +38,9 @@ for s in a["runs"]["steps"]:
         m = re.fullmatch(r"\s*inputs\.(\w+)\s*!=\s*''\s*", cond)
         if m and not inputs.get(m.group(1)):
             continue
-    run = re.sub(r"\$\{\{\s*inputs\.(\w+)\s*\}\}", lambda m: inputs.get(m.group(1), ""), s["run"])
-    steps.append({"id": s.get("id", ""), "run": run})
+    sub = lambda t: re.sub(r"\$\{\{\s*inputs\.(\w+)\s*\}\}", lambda m: inputs.get(m.group(1), ""), t)
+    env = "".join(f"export {k}={json.dumps(sub(str(v)))}\n" for k, v in (s.get("env") or {}).items())
+    steps.append({"id": s.get("id", ""), "run": env + sub(s["run"])})
 json.dump(steps, open(f"{tmp}/steps.json", "w"))
 print(f"{len(steps)} step(s) from action.yml")
 PY
@@ -56,3 +57,4 @@ for ((i = 0; i < n; i++)); do
   bash -e "$tmp/step.sh"
 done
 printf '\033[1;32m✓ outputs\033[0m\n'; sed 's/^/  /' "$GITHUB_OUTPUT"
+[ -s "$GITHUB_STEP_SUMMARY" ] && { printf '\033[1;33m✓ job summary\033[0m\n'; sed 's/^/  /' "$GITHUB_STEP_SUMMARY"; }

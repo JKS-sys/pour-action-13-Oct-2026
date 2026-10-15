@@ -6,11 +6,11 @@ branding:
   color: "yellow"
 inputs:
   packages:
-    description: "Formulae to install, space separated (e.g. `jq ffmpeg wget`)."
+    description: "Formulae and command-line tools to install, space separated (e.g. `jq ffmpeg gh`). On Windows these come from each tool's own build."
     required: false
     default: ""
   casks:
-    description: "Casks (macOS apps) to install, space separated."
+    description: "Apps to install with `pour install --cask`, space separated (macOS apps; the creator's apps on every system)."
     required: false
     default: ""
   version:
@@ -37,32 +37,19 @@ runs:
   steps:
     - id: setup
       shell: bash
-      run: |
-        set -euo pipefail
-        os=$(uname -s); arch=$(uname -m)
-        case "$os" in Darwin) os=macos;; Linux) os=linux;; MINGW*|MSYS*) os=windows;; *) echo "unsupported $os"; exit 1;; esac
-        case "$arch" in arm64|aarch64) arch=arm64;; x86_64|amd64) arch=x86_64;; esac
-        asset="pour-$os-$arch"; [ "$os" = windows ] && asset="$asset.exe"
-        ver="${{ inputs.version }}"
-        if [ "$ver" = latest ]; then url="https://ipconfig.co.network/pour/dl/$asset"; alt="https://github.com/JKS-sys/pour-13-Oct-2026/releases/latest/download/$asset"; else url="https://ipconfig.co.network/pour/dl/v$ver/$asset"; alt="https://github.com/JKS-sys/pour-13-Oct-2026/releases/download/v$ver/$asset"; fi
-        prefix="${{ inputs.prefix }}"
-        if [ -z "$prefix" ]; then if [ "$os" = windows ]; then prefix="$RUNNER_TEMP/pour"; else prefix=/opt/pour; fi; fi
-        if [ "$os" != windows ]; then sudo mkdir -p "$prefix" && sudo chown -R "$(id -un)" "$prefix"; else mkdir -p "$prefix"; fi
-        mkdir -p "$prefix/bin"
-        curl -fsL --retry 3 -o "$prefix/bin/pour" "$url" || curl -fsSL --retry 3 -o "$prefix/bin/pour" "$alt"
-        chmod +x "$prefix/bin/pour"
-        echo "$prefix/bin" >> "$GITHUB_PATH"
-        echo "POUR_PREFIX=$prefix" >> "$GITHUB_ENV"
-        export POUR_PREFIX="$prefix"
-        "$prefix/bin/pour" update
-        echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
-        echo "version=$("$prefix/bin/pour" --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_PREFIX: ${{ inputs.prefix }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/ci.sh" setup
     - shell: bash
       if: inputs.packages != ''
-      run: pour install ${{ inputs.packages }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/ci.sh" install "${{ inputs.packages }}"
     - shell: bash
       if: inputs.casks != ''
-      run: pour install --cask ${{ inputs.casks }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/ci.sh" cask "${{ inputs.casks }}"
     - shell: bash
       if: inputs.brewfile != ''
-      run: pour bundle install --file "${{ inputs.brewfile }}"
+      run: bash "$GITHUB_ACTION_PATH/scripts/ci.sh" bundle "${{ inputs.brewfile }}"
+    - shell: bash
+      if: always()
+      run: bash "$GITHUB_ACTION_PATH/scripts/ci.sh" summary

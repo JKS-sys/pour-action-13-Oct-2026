@@ -37,6 +37,10 @@ That is the whole step: it downloads the `pour` build for the runner (macOS arm6
 </tr>
 </table>
 
+## Colour and pictures in the log
+
+The log opens with a gold Pour banner and a glass that fills in every colour but pink; each step is its own collapsible group; every package gets a green tick and its time. Pour's own output is coloured too — it turns colour on by itself on GitHub Actions (and GitLab, Buildkite, Azure Pipelines, CircleCI) — including `--json`. When the job ends, the **job summary** shows a table of what was poured with a bar per package and a chart of where the time went. Runners have no speakers, so the sounds Pour plays on a desktop stay off in CI.
+
 ## Try it on your machine
 
 ```sh
@@ -47,8 +51,8 @@ bash scripts/try-locally.sh jq tree        # the steps, with GITHUB_PATH / GITHU
 
 | Input | Default | What |
 |---|---|---|
-| `packages` | | formulae to install, space separated |
-| `casks` | | casks (macOS apps) to install |
+| `packages` | | formulae and command-line tools, space separated (`jq ffmpeg gh`) — on Windows each tool's own build |
+| `casks` | | apps for `pour install --cask` (macOS apps; the creator's apps on every system) |
 | `brewfile` | | a Brewfile to install with `pour bundle` |
 | `version` | `latest` | Pour version |
 | `prefix` | `/opt/pour` (`$RUNNER_TEMP/pour` on Windows) | where Pour lives |
